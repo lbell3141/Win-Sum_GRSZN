@@ -30,6 +30,8 @@ for (df_name in names(data_frames)) {
 
 #condensing data frames to variables of interest 
 dat_file <- data_frames$`AMF_US-CMW_BASE_HH_2-5.csv`
+dat_file <- dat_file[dat_file$Year %in% c(2009:2021),]
+
 dat_CMW <- data.frame(
                       yr = dat_file$Year,
                       mon = dat_file$Month,
@@ -44,6 +46,8 @@ dat_CMW <- data.frame(
                       )
 
 dat_file <- data_frames$`AMF_US-MtB_BASE_HH_4-5.csv`
+dat_file <- dat_file[dat_file$Year %in% c(2009:2021),]
+
 dat_MtB <- data.frame(
   yr = dat_file$Year,
   mon = dat_file$Month,
@@ -59,6 +63,8 @@ if(!"precip" %in% colnames(dat_MtB)) {
   }
 
 dat_file <- data_frames$`AMF_US-NR1_BASE_HH_19-5.csv`
+dat_file <- dat_file[dat_file$Year %in% c(2009:2021),]
+
 dat_NR1 <- data.frame(
   yr = dat_file$Year,
   mon = dat_file$Month,
@@ -71,6 +77,8 @@ dat_NR1 <- data.frame(
 )
 
 dat_file <- data_frames$`AMF_US-SRG_BASE_HH_14-5.csv`
+dat_file <- dat_file[dat_file$Year %in% c(2009:2021),]
+
   dat_SRG <- data.frame(
   yr = dat_file$Year,
   mon = dat_file$Month,
@@ -83,6 +91,8 @@ dat_file <- data_frames$`AMF_US-SRG_BASE_HH_14-5.csv`
 )
 
 dat_file <- data_frames$`AMF_US-SRM_BASE_HH_25-5.csv`
+dat_file <- dat_file[dat_file$Year %in% c(2009:2021),]
+
   dat_SRM <- data.frame(
     yr = dat_file$Year,
     mon = dat_file$Month,
@@ -95,6 +105,8 @@ dat_file <- data_frames$`AMF_US-SRM_BASE_HH_25-5.csv`
   )
   
 dat_file <- data_frames$`AMF_US-Whs_BASE_HH_20-5.csv`
+dat_file <- dat_file[dat_file$Year %in% c(2009:2021),]
+
   dat_Whs <- data.frame(
     yr = dat_file$Year,
     mon = dat_file$Month,
@@ -107,6 +119,8 @@ dat_file <- data_frames$`AMF_US-Whs_BASE_HH_20-5.csv`
   )
   
 dat_file <- data_frames$`AMF_US-Wkg_BASE_HH_20-5.csv`
+dat_file <- dat_file[dat_file$Year %in% c(2009:2021),]
+
   dat_Wkg <- data.frame(
     yr = dat_file$Year,
     mon = dat_file$Month,
@@ -139,36 +153,86 @@ is_winter <- function(month) {
   month %in% win_months
 }
 
-summer_data <- lapply(data_frames, function(df) {
-  filter(df, Month %in% sum_months)
+summer_data <- lapply(var_df, function(df) {
+  filter(df, mon %in% sum_months)
 })
-winter_data <- lapply(data_frames, function(df) {
-  filter(df, Month %in% win_months)
+winter_data <- lapply(var_df, function(df) {
+  filter(df, mon %in% win_months)
 })
 
 #finding z-scores for each variable using sum/win grszn data frames 
 #Using multi-annual mean ("long-term") and annual means ("short-term")
 
-#lt_means for sum and win
+#multiannual means for sum and win
 columns <- c("swc", "temp_atmos", "temp_soil", "precip", "ppfd_in")
-multiannual_means <- data.frame()
-for (i in seq_along(var_dat)) {
-  dat_file
+
+multiannual_means_summer <- list()
+multiannual_sd_summer <- list()
+for (df_name in names(summer_data)) {
+  df <- summer_data[[df_name]]
+  means <- summarize_at(df, vars(all_of(columns)), mean, na.rm = TRUE, .name = "mean_{.col}")
+  sd <- summarize_at(df, vars(all_of(columns)), ~sd(. , na.rm = TRUE), .name = "sd_{.col}")
+  multiannual_means_summer[[df_name]] <- means
+  multiannual_sd_summer[[df_name]] <- sd
 }
-  dat_file_fr %>%
-  group_by(yr) %>%
-  summarise(across(all_of(columns), mean, na.rm = TRUE, .names = "st_mn_{.col}")) 
+
+multiannual_means_winter <- list()
+multiannual_sd_winter <- list()
+for (df_name in names(winter_data)) {
+  df <- winter_data[[df_name]]
+  means <- summarize_at(df, vars(all_of(columns)), mean, na.rm = TRUE, .name = "mean_{.col}")
+  sd <- summarize_at(df, vars(all_of(columns)), ~sd(. , na.rm = TRUE), .name = "sd_{.col}")
+  multiannual_means_winter[[df_name]] <- means
+  multiannual_sd_winter[[df_name]] <- sd
+  }
+
+#annual means for sum and win
+annual_means_summer <- list()
+for (df_name in names(summer_data)) {
+  df <- summer_data[[df_name]]
+  means <- df %>%
+  group_by(yr)%>%
+    summarize(across(all_of(columns), mean, na.rm = TRUE))
+  annual_means_summer[[df_name]] <- means  
+}
+
+annual_means_winter <- list()
+for (df_name in names(winter_data)) {
+  df <- winter_data[[df_name]]
+  means <- df %>%
+    group_by(yr)%>%
+    summarize(across(all_of(columns), mean, na.rm = TRUE))
+  annual_means_winter[[df_name]] <- means  
+}
+
+
+#-----------------------------------------------------------------
+#calculating z-scores
+
+annual_zscores <- list()
+for (i in 1:7) {
+  annual_means <- annual_means_summer[[i]]
+  multiannual_means <- multiannual_means_summer[[i]]
+  multiannual_sd <- multiannual_sd_summer[[i]]
+  
+  # Extract the variable columns from annual_means
+  variables <- names(annual_means)[-1]
+  
+  # Calculate z-scores for each variable
+  z_scores <- data.frame(year = annual_means$yr)
+  for (var in variables) {
+    annual_mean <- annual_means[[var]]
+    multiannual_mean <- multiannual_means[[var]]
+    multiannual_sd <- multiannual_sd[[var]]  # Accessing the specific variable column
+    
+    z_score <- (annual_mean - multiannual_mean) / multiannual_sd
+    z_scores <- cbind(z_scores, z_score)
+  }
+  
+  annual_zscores[[i]] <- z_scores
+}
 
 
 
-
-
-
-
-
-
-
-
-
-
+  
 
