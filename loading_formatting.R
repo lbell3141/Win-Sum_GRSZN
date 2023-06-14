@@ -6,6 +6,7 @@
 library(lubridate)
 library(dplyr)
 library(ggplot2)
+library(gridExtra)
 
 #loading all files in at once
 getwd()
@@ -259,9 +260,95 @@ for (i in 1:7) {
   annual_zscores_winter[[df_name]] <- z_scores
 }
 
-
 #-----------------------------Plotting
 
+#plotting all variables for one site; displaying seven separate plots (5 var each) at once
+#summer 
 
+plots_zscore_site_summer <- list()
+for (df_name in names(annual_zscores_summer)) {
+  df <- annual_zscores_summer[[df_name]]
   
+  plot <- ggplot(data = df, mapping = aes(year)) +
+    geom_line(aes(y = swc_z_score, color = "swc_z_score")) +
+    geom_line(aes(y = temp_atmos_z_score, color = "temp_atmos_z_score")) +
+    geom_line(aes(y = temp_soil_z_score, color = "temp_soil_z_score")) +
+    geom_line(aes(y = precip_z_score, color = "precip_z_score")) +
+    geom_line(aes(y = ppfd_in_z_score, color = "ppfd_in_z_score")) +
+    geom_hline(yintercept = 0) +
+    labs(title = df_name, y = " ") 
+  
+  plots_zscore_site_summer[[df_name]] <- plot
+}
 
+grid.arrange(grobs = plots_zscore_site_summer, ncol = 3)
+
+#winter
+plots_zscore_site_winter <- list()
+for (df_name in names(annual_zscores_winter)) {
+  df <- annual_zscores_winter[[df_name]]
+  
+  plot <- ggplot(data = df, mapping = aes(year)) +
+    geom_line(aes(y = swc_z_score, color = "swc_z_score")) +
+    geom_line(aes(y = temp_atmos_z_score, color = "temp_atmos_z_score")) +
+    geom_line(aes(y = temp_soil_z_score, color = "temp_soil_z_score")) +
+    geom_line(aes(y = precip_z_score, color = "precip_z_score")) +
+    geom_line(aes(y = ppfd_in_z_score, color = "ppfd_in_z_score")) +
+    geom_hline(yintercept = 0) +
+    labs(title = df_name, y = " ") 
+  
+  plots_zscore_site_winter[[df_name]] <- plot
+}
+
+grid.arrange(grobs = plots_zscore_site_winter, ncol = 3)
+
+
+#---------------------------------------------------------
+
+
+#plotting multiple sites for one variable (5 separate plots with seven lines, one for each site)
+#summer
+variable_names <- c("swc_z_score", "temp_atmos_z_score", "temp_soil_z_score", "precip_z_score", "ppfd_in_z_score")
+plots <- list()
+
+for (var in variable_names) {
+   p <- ggplot() +
+    labs(x = "Year", y = var, color = "Data Frame")+
+     geom_hline(yintercept = 0)
+   
+  for (i in 1:7) {
+    df <- annual_zscores_summer[[i]]
+    df_name <- names(annual_zscores_summer)[[i]]
+
+    df$df_name <- factor(df_name)
+    
+    p <- p + geom_line(data = df, aes(x = year, y = .data[[var]], color = df_name))
+  }
+
+  plots[[var]] <- p
+}
+
+grid.arrange(grobs = plots, ncol = 3)
+
+#winter 
+variable_names <- c("swc_z_score", "temp_atmos_z_score", "temp_soil_z_score", "precip_z_score", "ppfd_in_z_score")
+plots <- list()
+
+for (var in variable_names) {
+  p <- ggplot() +
+    labs(x = "Year", y = var, color = "Data Frame")+
+    geom_hline(yintercept = 0)
+  
+  for (i in 1:7) {
+    df <- annual_zscores_winter[[i]]
+    df_name <- names(annual_zscores_winter)[[i]]
+    
+    df$df_name <- factor(df_name)
+    
+    p <- p + geom_line(data = df, aes(x = year, y = .data[[var]], color = df_name))
+  }
+  
+  plots[[var]] <- p
+}
+
+grid.arrange(grobs = plots, ncol = 3)
