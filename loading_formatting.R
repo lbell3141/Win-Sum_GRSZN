@@ -205,8 +205,8 @@ for (df_name in names(winter_data)) {
   annual_means_winter[[df_name]] <- means  
 }
 
-#calculating z-scores
-annual_zscores <- list()
+#calculating z-scores for summer
+annual_zscores_summer <- list()
 for (i in 1:7) {
   annual_means <- annual_means_summer[[i]]
   multiannual_means <- multiannual_means_summer[[i]]
@@ -223,12 +223,44 @@ for (i in 1:7) {
     multiannual_sd_var <- multiannual_sd[[var]]
     
     z_score <- (annual_mean_var - multiannual_mean_var) / multiannual_sd_var
+    col_name <- paste0(var, "_z_score")
     z_scores <- cbind(z_scores, z_score)
+    names(z_scores)[ncol(z_scores)] <- col_name
   }
-  
-  annual_zscores[[i]] <- z_scores
+  df_name <- names(annual_means_summer)[i]
+  names(z_scores)[1] <- "year"
+  annual_zscores_summer[[df_name]] <- z_scores
 }
 
+#calculating z-scores for winter
+annual_zscores_winter <- list()
+for (i in 1:7) {
+  annual_means <- annual_means_winter[[i]]
+  multiannual_means <- multiannual_means_winter[[i]]
+  multiannual_sd <- multiannual_sd_winter[[i]]
+  
+  # removing year; leaving only variables of interest for zscores
+  variables <- names(annual_means)[-1]
+  
+  # Calculate z-scores for each variable
+  z_scores <- data.frame(year = annual_means$yr)
+  for (var in variables) {
+    annual_mean_var <- annual_means[[var]]
+    multiannual_mean_var <- multiannual_means[[var]]
+    multiannual_sd_var <- multiannual_sd[[var]]
+    
+    z_score <- (annual_mean_var - multiannual_mean_var) / multiannual_sd_var
+    col_name <- paste0(var, "_z_score")
+    z_scores <- cbind(z_scores, z_score)
+    names(z_scores)[ncol(z_scores)] <- col_name
+  }
+  df_name <- names(annual_means_winter)[i]
+  names(z_scores)[1] <- "year"
+  annual_zscores_winter[[df_name]] <- z_scores
+}
+
+
+#-----------------------------Plotting
 
 
   
